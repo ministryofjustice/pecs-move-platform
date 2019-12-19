@@ -1,0 +1,73 @@
+version: '3'
+
+services:
+
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_DB=hmpps-book-secure-move-api
+    ports: 
+      - 5432:5432
+  # api:
+  #   build:
+  #     context: ../hmpps-book-secure-move-api
+  #     dockerfile: Dockerfile
+  #     # args:
+  #     #   RAILS_ENV: development
+  #   environment:
+  #     - DATABASE_URL=postgresql://postgres@db/hmpps-book-secure-move-api
+  #     - SECRET_KEY_BASE=h463472fhaa91f4a277002e9652f86f330e636358e2090d86ab4a4f06845ege1
+  #     - SERVE_API_DOCS=true
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - db
+  #     - elite2-api
+
+  redis:
+    image: redis
+    ports:
+      - 6379:6379
+  # web:
+  #   build: ../hmpps-book-secure-move-frontend
+  #   environment:
+  #     - REDIS_URL=redis://redis:6379
+  #     - SESSION_SECRET=example-secret
+  #     - API_BASE_URL=http://localhost:3000/api/v1
+  #     - API_AUTH_URL=http://localhost:3000/oauth/token
+  #     - API_CLIENT_ID=
+  #     - API_SECRET=
+  #     - AUTH_PROVIDER_KEY=
+  #     - AUTH_PROVIDER_SECRET=
+  #     - AUTH_PROVIDER_URL=
+  #     - SERVER_HOST=localhost:3001
+  #   ports:
+  #     - "3001:3001"
+  #   depends_on:
+  #     - api
+  #     - redis
+  #     - oauth-server
+
+  oauth-server:
+    image: mojdigitalstudio/nomis-oauth2-server:latest
+    container_name: oauth-server
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/auth/health"]
+    environment:
+      - SERVER_PORT=9090
+      - SPRING_PROFILES_ACTIVE=dev
+
+  elite2-api:
+    image: mojdigitalstudio/elite2-api:latest
+    container_name: elite2-api
+    depends_on:
+      - oauth-server
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+    environment:
+      - SERVER_PORT=8080
+      - SPRING_PROFILES_ACTIVE=nomis-hsqldb
